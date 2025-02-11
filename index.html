@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GM Greetings dApp</title>
+    <link rel="icon" href="data:,"> <!-- Dodaj pusty favicon -->
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        input, button {
+            margin: 10px 0;
+            padding: 10px;
+            font-size: 16px;
+        }
+        #greetingInfo {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>GM Greetings dApp</h1>
+    <input type="text" id="message" placeholder="Enter your GM message">
+    <button id="sendGM">Say GM</button>
+
+    <div id="greetingInfo">
+        <h2>Greeting Info</h2>
+        <p><strong>Current Greeting:</strong> <span id="currentGreeting"></span></p>
+        <p><strong>Last Greeter:</strong> <span id="lastGreeter"></span></p>
+        <p><strong>Total Greetings:</strong> <span id="greetingCount"></span></p>
+    </div>
+
+    <!-- Ładowanie Ethers.js -->
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+
+    <script>
+        // Konfiguracja
+        const contractAddress = "0x06B17752e177681e5Df80e0996228D7d1dB2F61b"; // Adres Twojego kontraktu
+        const contractABI = [
+            {
+                "type": "constructor",
+                "inputs": [],
+                "stateMutability": "nonpayable"
+            },
+            {
+                "type": "function",
+                "name": "getGreeting",
+                "inputs": [],
+                "outputs": [
+                    {
+                        "name": "",
+                        "type": "string",
+                        "internalType": "string"
+                    }
+                ],
+                "stateMutability": "view"
+            },
+            {
+                "type": "function",
+                "name": "getGreetingCount",
+                "inputs": [],
+                "outputs": [
+                    {
+                        "name": "",
+                        "type": "uint256",
+                        "internalType": "uint256"
+                    }
+                ],
+                "stateMutability": "view"
+            },
+            {
+                "type": "function",
+                "name": "getLastGreeter",
+                "inputs": [],
+                "outputs": [
+                    {
+                        "name": "",
+                        "type": "address",
+                        "internalType": "address"
+                    }
+                ],
+                "stateMutability": "view"
+            },
+            {
+                "type": "function",
+                "name": "greeting",
+                "inputs": [],
+                "outputs": [
+                    {
+                        "name": "",
+                        "type": "string",
+                        "internalType": "string"
+                    }
+                ],
+                "stateMutability": "view"
+            },
+            {
+                "type": "function",
+                "name": "greetingCount",
+                "inputs": [],
+                "outputs": [
+                    {
+                        "name": "",
+                        "type": "uint256",
+                        "internalType": "uint256"
+                    }
+                ],
+                "stateMutability": "view"
+            },
+            {
+                "type": "function",
+                "name": "lastGreeter",
+                "inputs": [],
+                "outputs": [
+                    {
+                        "name": "",
+                        "type": "address",
+                        "internalType": "address"
+                    }
+                ],
+                "stateMutability": "view"
+            },
+            {
+                "type": "function",
+                "name": "sayGM",
+                "inputs": [
+                    {
+                        "name": "_message",
+                        "type": "string",
+                        "internalType": "string"
+                    }
+                ],
+                "outputs": [],
+                "stateMutability": "nonpayable"
+            },
+            {
+                "type": "event",
+                "name": "NewGM",
+                "inputs": [
+                    {
+                        "name": "greeter",
+                        "type": "address",
+                        "indexed": true,
+                        "internalType": "address"
+                    },
+                    {
+                        "name": "message",
+                        "type": "string",
+                        "indexed": false,
+                        "internalType": "string"
+                    }
+                ],
+                "anonymous": false
+            }
+        ];
+
+        // Połączenie z Metamask
+        let provider, signer, contract;
+
+        async function connect() {
+            if (window.ethereum) {
+                console.log("Metamask detected!");
+                provider = new ethers.providers.Web3Provider(window.ethereum);
+                console.log("Requesting accounts...");
+                await window.ethereum.request({ method: 'eth_requestAccounts' });
+                signer = provider.getSigner();
+                console.log("Signer:", await signer.getAddress());
+                contract = new ethers.Contract(contractAddress, contractABI, signer);
+                console.log("Contract connected!");
+            } else {
+                alert("Please install Metamask!");
+            }
+        }
+
+        // Wysyłanie GM
+        async function sendGM() {
+            const message = document.getElementById("message").value;
+            if (!message) {
+                alert("Please enter a message!");
+                return;
+            }
+
+            try {
+                console.log("Sending GM with message:", message);
+                const tx = await contract.sayGM(message);
+                console.log("Transaction sent:", tx);
+                await tx.wait();
+                console.log("Transaction confirmed!");
+                alert("GM sent!");
+                updateGreetingInfo();
+            } catch (error) {
+                console.error("Error sending GM:", error);
+                alert("Error sending GM. Check the console for details.");
+            }
+        }
+
+        // Aktualizacja informacji o powitaniu
+        async function updateGreetingInfo() {
+            try {
+                console.log("Updating greeting info...");
+                const currentGreeting = await contract.getGreeting();
+                const lastGreeter = await contract.getLastGreeter();
+                const greetingCount = await contract.getGreetingCount();
+
+                console.log("Current Greeting:", currentGreeting);
+                console.log("Last Greeter:", lastGreeter);
+                console.log("Greeting Count:", greetingCount);
+
+                document.getElementById("currentGreeting").textContent = currentGreeting;
+                document.getElementById("lastGreeter").textContent = lastGreeter;
+                document.getElementById("greetingCount").textContent = greetingCount.toString();
+            } catch (error) {
+                console.error("Error updating greeting info:", error);
+            }
+        }
+
+        // Inicjalizacja
+        window.onload = async () => {
+            console.log("Page loaded!");
+            await connect();
+            await updateGreetingInfo();
+
+            document.getElementById("sendGM").addEventListener("click", sendGM);
+        };
+    </script>
+</body>
+</html>
